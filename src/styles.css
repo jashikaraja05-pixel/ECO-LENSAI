@@ -191,7 +191,7 @@
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @utility glow { box-shadow: 0 8px 24px -10px color-mix(in oklab, var(--primary) 70%, transparent); }
 @utility text-gradient { background-image: var(--gradient-ocean); background-clip: text; color: transparent; }
-@utility bg-auth { background-image: radial-gradient(circle at 15% 10%, oklch(0.95 0.06 150), transparent 45%), radial-gradient(circle at 85% 90%, oklch(0.95 0.05 140), transparent 45%); }
+@utility bg-auth { background-image: radial-gradient(circle at 15% 10%, oklch(0.94 0.07 195), transparent 45%), radial-gradient(circle at 85% 90%, oklch(0.95 0.06 165), transparent 45%); }
 @utility scan-line { animation: scanLine 1.8s ease-in-out infinite; }
 @keyframes scanLine { 0%,100% { top: 8%; } 50% { top: 88%; } }
 @utility pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
