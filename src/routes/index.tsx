@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Leaf, LogOut, ScanLine, LayoutDashboard, History, BookOpen, Upload, Camera, RotateCcw,
   Loader2, Sparkles, CheckCircle2, Recycle, AlertTriangle, Trash2, Cpu, UserX, HelpCircle, Gauge, Search,
-  Eye, EyeOff, Mail, Lock, X, ImagePlus, ArrowRight, Server, MoreVertical, Clock, ShieldCheck, Info,
+  Eye, EyeOff, Mail, Lock, X, ImagePlus, ArrowRight, Server, Settings, Clock, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,8 +16,8 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { classifyWaste, deleteMyAccount } from "@/lib/classify.functions";
 import type { ScanResult, StoredCategory } from "@/lib/scan-schema";
@@ -65,6 +65,7 @@ function App() {
   const [history, setHistory] = useState<Scan[]>([]);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [viewing, setViewing] = useState<Scan | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const deleteAccountFn = useServerFn(deleteMyAccount);
 
@@ -118,18 +119,17 @@ function App() {
   if (!user) return <AuthScreen />;
 
   return (
-    <div className="min-h-dvh lg:pl-64">
-      <Sidebar tab={tab} setTab={go} user={user} onLogout={logout} onDeleteAccount={removeAccount} />
-      <MobileTop user={user} onLogout={logout} onDeleteAccount={removeAccount} />
-      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 sm:pt-8 lg:px-10 lg:pb-12">
+    <div className="min-h-dvh">
+      <TopNav tab={tab} setTab={go} user={user} onLogout={logout} onDeleteAccount={removeAccount} />
+      <main className="mx-auto w-full max-w-6xl px-4 pb-12 pt-5 sm:px-6 sm:pt-8 lg:px-10">
         <div key={tab} className="fade-up">
           {tab === "scan" && <Scanner onSaved={(s) => setHistory((h) => [s, ...h])} />}
-          {tab === "dashboard" && <Dashboard user={user} history={history} onGoScan={() => go("scan")} onGoHistory={() => go("history")} />}
-          {tab === "history" && <HistoryView history={history} onDelete={removeScan} onClearAll={clearAll} onGoScan={() => go("scan")} />}
+          {tab === "dashboard" && <Dashboard history={history} />}
+          {tab === "history" && <HistoryView history={history} onDelete={removeScan} onClearAll={clearAll} onGoScan={() => go("scan")} onView={setViewing} />}
           {tab === "learn" && <Learn />}
         </div>
       </main>
-      <BottomNav tab={tab} setTab={go} />
+      <ScanDetail scan={viewing} onClose={() => setViewing(null)} />
       <AlertDialog open={!!confirm} onOpenChange={(o) => { if (!o && !confirmBusy) setConfirm(null); }}>
         <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md rounded-2xl">
           <AlertDialogHeader>
@@ -165,71 +165,52 @@ function Brand({ tagline = false }: { tagline?: boolean }) {
   );
 }
 
-function AccountMenu({ user, onLogout, onDeleteAccount }: { user: User; onLogout: () => void; onDeleteAccount: () => void }) {
+function AccountSettings({ user, onLogout, onDeleteAccount }: { user: User; onLogout: () => void; onDeleteAccount: () => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-10 shrink-0 rounded-full" aria-label="Account menu"><MoreVertical className="size-5" /></Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 max-w-[calc(100vw-2rem)] rounded-xl">
-        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{user.email}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onLogout} className="py-2.5"><LogOut className="size-4" /> Log Out</DropdownMenuItem>
-        <DropdownMenuItem onSelect={onDeleteAccount} className="py-2.5 text-destructive focus:text-destructive"><UserX className="size-4" /> Delete Account</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-10 shrink-0 rounded-full" aria-label="Account settings"><Settings className="size-5" /></Button>
+      </DialogTrigger>
+      <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-3xl">
+        <DialogHeader>
+          <DialogTitle>Account Settings</DialogTitle>
+          <DialogDescription>Signed in as</DialogDescription>
+        </DialogHeader>
+        <p className="flex items-center gap-2 truncate rounded-xl bg-muted px-3 py-3 text-sm"><Mail className="size-4 shrink-0 text-primary" /><span className="truncate">{user.email}</span></p>
+        <div className="grid gap-2">
+          <Button variant="outline" className="h-11 rounded-xl" onClick={() => { setOpen(false); onLogout(); }}><LogOut className="size-4" /> Log Out</Button>
+          <Button variant="outline" className="h-11 rounded-xl text-destructive hover:text-destructive" onClick={() => { setOpen(false); onDeleteAccount(); }}><UserX className="size-4" /> Delete Account</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function Sidebar({ tab, setTab, user, onLogout, onDeleteAccount }: { tab: Tab; setTab: (t: Tab) => void; user: User; onLogout: () => void; onDeleteAccount: () => void }) {
+function TopNav({ tab, setTab, user, onLogout, onDeleteAccount }: { tab: Tab; setTab: (t: Tab) => void; user: User; onLogout: () => void; onDeleteAccount: () => void }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-5 lg:flex">
-      <Brand tagline />
-      <nav className="mt-8 flex flex-col gap-1" aria-label="Main">
+    <header className="pt-safe sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-10">
+        <Brand />
+        <nav aria-label="Main" className="ml-auto hidden items-center gap-1 rounded-full bg-muted p-1 md:flex">
+          {NAV.map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}
+              className={`flex h-9 items-center gap-2 rounded-full px-4 text-sm font-medium transition-all ${tab === id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <Icon className="size-4" /> {label}
+            </button>
+          ))}
+        </nav>
+        <div className="ml-auto md:ml-0"><AccountSettings user={user} onLogout={onLogout} onDeleteAccount={onDeleteAccount} /></div>
+      </div>
+      <nav aria-label="Main" className="no-scrollbar grid grid-cols-4 gap-1 px-2 pb-2 md:hidden">
         {NAV.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}
-            className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${tab === id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-            <Icon className={`size-5 ${tab === id ? "text-primary" : ""}`} /> {label}
+            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${tab === id ? "bg-secondary text-primary" : "text-muted-foreground"}`}>
+            <Icon className="size-5" /><span className="max-w-full truncate">{label}</span>
           </button>
         ))}
       </nav>
-      <div className="bg-hero mt-8 rounded-2xl p-4 text-primary-foreground">
-        <p className="text-sm font-semibold">Neural Storm 2026</p>
-        <p className="mt-0.5 text-xs opacity-90">Green Planet · GP-05</p>
-      </div>
-      <div className="mt-auto flex items-center gap-2 rounded-xl border border-border p-2 pl-3">
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-sm font-semibold uppercase text-secondary-foreground">{user.email?.[0] ?? "U"}</span>
-        <span className="min-w-0 flex-1 truncate text-sm">{user.email}</span>
-        <AccountMenu user={user} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
-      </div>
-    </aside>
-  );
-}
-
-function MobileTop({ user, onLogout, onDeleteAccount }: { user: User; onLogout: () => void; onDeleteAccount: () => void }) {
-  return (
-    <header className="pt-safe sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur lg:hidden">
-      <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6">
-        <Brand />
-        <AccountMenu user={user} onLogout={onLogout} onDeleteAccount={onDeleteAccount} />
-      </div>
     </header>
-  );
-}
-
-function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  return (
-    <nav aria-label="Main" className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur lg:hidden">
-      <div className="mx-auto grid max-w-lg grid-cols-4 px-2 pt-1.5">
-        {NAV.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}
-            className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium transition-colors ${tab === id ? "text-primary" : "text-muted-foreground"}`}>
-            <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${tab === id ? "bg-secondary" : ""}`}><Icon className="size-5" /></span>
-            <span className="max-w-full truncate">{label}</span>
-          </button>
-        ))}
-      </div>
-    </nav>
   );
 }
 
@@ -626,104 +607,68 @@ function ResultCard({ r }: { r: ScanResult }) {
 }
 
 /* ---------------- Dashboard ---------------- */
-function Dashboard({ user, history, onGoScan, onGoHistory }: { user: User; history: Scan[]; onGoScan: () => void; onGoHistory: () => void }) {
+function Dashboard({ history }: { history: Scan[] }) {
   const s = stats(history);
-  const name = user.email?.split("@")[0] ?? "there";
   const cards = [
+    { label: "Total Scans", value: s.total, icon: ScanLine, tone: "bg-ocean" },
     { label: "Organic", value: s.organic, icon: Leaf, tone: "bg-bin-green" },
     { label: "Recyclable", value: s.recyclable, icon: Recycle, tone: "bg-bin-blue" },
     { label: "Hazardous", value: s.hazardous, icon: AlertTriangle, tone: "bg-bin-red" },
     { label: "Residual", value: s.residual, icon: Trash2, tone: "bg-bin-black" },
-    { label: "Uncertain", value: s.uncertain, icon: HelpCircle, tone: "bg-muted-foreground" },
   ];
+  const bars = cards.slice(1);
+  const max = Math.max(1, ...bars.map((b) => b.value));
   return (
     <section>
-      <div className="bg-hero relative overflow-hidden rounded-3xl p-6 text-primary-foreground sm:p-8">
-        <Leaf className="absolute -right-8 -top-8 size-48 opacity-10 sm:size-64" aria-hidden="true" />
-        <p className="text-sm font-medium opacity-90">Welcome back,</p>
-        <h1 className="mt-0.5 truncate text-2xl font-bold sm:text-3xl">{name}</h1>
-        <p className="mt-2 max-w-md text-sm opacity-90 sm:text-base">Every correctly sorted item keeps recyclables out of landfill. Scan. Sort. Save.</p>
-        <div className="mt-6 flex flex-wrap items-end gap-x-10 gap-y-4">
-          <div><p className="font-display text-4xl font-bold">{s.total}</p><p className="text-sm opacity-90">Total scans</p></div>
-          {s.total > 0 && <div><p className="font-display text-4xl font-bold">{s.avgConfidence}%</p><p className="text-sm opacity-90">Avg. model confidence</p></div>}
-          <Button onClick={onGoScan} variant="secondary" className="ml-auto h-11 w-full rounded-xl sm:w-auto"><ScanLine className="size-4" /> Scan Waste</Button>
+      <PageHeader title="Dashboard" sub="Your sorting at a glance." />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        {cards.map(({ label, value, icon: Icon, tone }, i) => (
+          <div key={label} className={`glass lift min-w-0 rounded-3xl p-4 sm:p-5 ${i === 0 ? "col-span-2 sm:col-span-1" : ""}`}>
+            <span className={`${tone} grid size-10 place-items-center rounded-xl text-primary-foreground`}><Icon className="size-5" /></span>
+            <p className="mt-3 text-2xl font-bold sm:text-3xl">{value}</p>
+            <p className="truncate text-sm text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="glass mt-6 rounded-3xl p-5 sm:p-6">
+        <p className="font-semibold">Sorting by category</p>
+        <p className="text-sm text-muted-foreground">{s.total === 0 ? "Scan an item to start your chart." : `Based on your ${s.total} scan${s.total === 1 ? "" : "s"}`}</p>
+        <div className="mt-6 flex h-56 items-end justify-around gap-3 border-b border-border sm:gap-6" role="img"
+          aria-label={bars.map((b) => `${b.label} ${b.value}`).join(", ")}>
+          {bars.map((b) => (
+            <div key={b.label} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+              <span className="text-sm font-semibold tabular-nums">{b.value}</span>
+              <div className={`${b.tone} w-full max-w-16 rounded-t-xl transition-all duration-700`} style={{ height: `${Math.max(2, (b.value / max) * 85)}%` }} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex justify-around gap-3 sm:gap-6">
+          {bars.map((b) => <span key={b.label} className="min-w-0 flex-1 truncate text-center text-xs text-muted-foreground sm:text-sm">{b.label}</span>)}
         </div>
       </div>
-
-      {s.total === 0 ? (
-        <div className="mt-6">
-          <EmptyState icon={ScanLine} title="No scans yet" body="Your impact story starts with your first scan. Photograph a waste item and we'll tell you which bin it belongs in."
-            action={<Button onClick={onGoScan} className="glow h-11 rounded-xl"><ScanLine className="size-4" /> Scan your first item</Button>} />
-        </div>
-      ) : (
-        <>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
-            {cards.map(({ label, value, icon: Icon, tone }) => (
-              <div key={label} className="glass lift min-w-0 rounded-2xl p-4 sm:p-5">
-                <span className={`${tone} grid size-10 place-items-center rounded-xl text-primary-foreground`}><Icon className="size-5" /></span>
-                <p className="mt-3 text-2xl font-bold sm:text-3xl">{value}</p>
-                <p className="truncate text-sm text-muted-foreground">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 grid gap-5 lg:grid-cols-5 lg:gap-6">
-            <div className="glass min-w-0 rounded-3xl p-5 sm:p-6 lg:col-span-3">
-              <p className="font-semibold">Category distribution</p>
-              <p className="text-sm text-muted-foreground">Share of your {s.total} scans</p>
-              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-muted">
-                {cards.map((c) => c.value > 0 && <div key={c.label} className={c.tone} style={{ width: `${(c.value / s.total) * 100}%` }} title={c.label} />)}
-              </div>
-              <ul className="mt-5 space-y-3">
-                {cards.map((c) => {
-                  const pct = Math.round((c.value / s.total) * 100);
-                  return (
-                    <li key={c.label} className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto] items-center gap-3 text-sm">
-                      <span className="flex min-w-0 items-center gap-2"><span className={`${c.tone} size-2.5 shrink-0 rounded-full`} /><span className="truncate">{c.label}</span></span>
-                      <span className="h-2 overflow-hidden rounded-full bg-muted"><span className={`${c.tone} block h-full rounded-full`} style={{ width: `${pct}%` }} /></span>
-                      <span className="w-16 text-right tabular-nums text-muted-foreground">{c.value} · {pct}%</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-            <div className="glass flex min-w-0 flex-col rounded-3xl p-5 sm:p-6 lg:col-span-2">
-              <p className="flex items-center gap-2 font-semibold"><Gauge className="size-4 text-primary" /> Average model confidence</p>
-              <div className="my-5 flex items-center justify-center">
-                <div className="relative grid size-36 place-items-center rounded-full" style={{ background: `conic-gradient(var(--primary) ${s.avgConfidence * 3.6}deg, var(--muted) 0deg)` }}>
-                  <div className="grid size-28 place-items-center rounded-full bg-card"><span className="font-display text-3xl font-bold">{s.avgConfidence}%</span></div>
-                </div>
-              </div>
-              <p className="flex gap-2 text-xs text-muted-foreground"><Info className="mt-0.5 size-3.5 shrink-0" />Mean self-reported confidence across the {s.total - s.uncertain} scans the model classified confidently. It reflects the model's certainty, not measured accuracy.</p>
-            </div>
-          </div>
-
-          <div className="glass mt-6 rounded-3xl p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Recent scans</p>
-              <Button variant="ghost" size="sm" className="rounded-lg text-primary" onClick={onGoHistory}>View all <ArrowRight className="size-4" /></Button>
-            </div>
-            <ul className="mt-2 divide-y divide-border">
-              {history.slice(0, 5).map((h) => (
-                <li key={h.id} className="flex items-center gap-3 py-3">
-                  <img src={h.image} alt="" loading="lazy" className="size-12 shrink-0 rounded-xl object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{h.item}</p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground"><Clock className="size-3" />{fmtDate(h.createdAt)}</p>
-                  </div>
-                  <CategoryBadge c={h.category} compact />
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
     </section>
   );
 }
 
+function ScanDetail({ scan, onClose }: { scan: Scan | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!scan} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-3xl p-0">
+        <DialogHeader className="sr-only"><DialogTitle>{scan?.item ?? "Scan"}</DialogTitle><DialogDescription>Scan details</DialogDescription></DialogHeader>
+        {scan && (
+          <>
+            <img src={scan.image} alt={scan.item} className="aspect-video w-full rounded-t-3xl bg-muted object-cover" />
+            <div className="px-1 pb-1"><ResultCard r={scan} /></div>
+            <p className="flex items-center gap-1 px-6 pb-5 text-xs text-muted-foreground"><Clock className="size-3" />{fmtDate(scan.createdAt)}</p>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ---------------- History ---------------- */
-function HistoryView({ history, onDelete, onClearAll, onGoScan }: { history: Scan[]; onDelete: (id: string) => void; onClearAll: () => void; onGoScan: () => void }) {
+function HistoryView({ history, onDelete, onClearAll, onGoScan, onView }: { history: Scan[]; onDelete: (id: string) => void; onClearAll: () => void; onGoScan: () => void; onView: (s: Scan) => void }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StoredCategory | "all">("all");
   const q = query.trim().toLowerCase();
@@ -785,7 +730,7 @@ function HistoryView({ history, onDelete, onClearAll, onGoScan }: { history: Sca
                 </ul>
                 <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Clock className="size-3" />{fmtDate(h.createdAt)}</span>
-                  <span className="font-medium">{h.confidence}% confidence</span>
+                  <Button variant="outline" size="sm" className="h-9 rounded-lg" onClick={() => onView(h)}><Eye className="size-4" /> View</Button>
                 </div>
               </div>
             </article>
