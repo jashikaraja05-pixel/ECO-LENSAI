@@ -1,0 +1,9 @@
+[
+  {"capability": "code/ui", "source": "code archive", "outcome": "migrate", "status": "verified (build OK, 9/9 tests, sign-in page renders)", "next_action": null},
+  {"capability": "schema (scans table + owner-only RLS)", "source": "drizzle migration from archive", "outcome": "migrate", "status": "applied to new Lovable Cloud", "next_action": null},
+  {"capability": "email/password accounts", "source": "Lovable Cloud auth, email confirmation on", "outcome": "migrate", "status": "enabled; sign-up/scan flow not exercised end-to-end", "next_action": "sign up in preview and run one scan"},
+  {"capability": "classifyWaste AI + save to history", "source": "Lovable AI Gateway", "outcome": "migrate", "status": "implemented, unexercised", "next_action": "verify with a real scan"},
+  {"capability": "Python FastAPI classifier", "source": "backend/ preserved; activates via PYTHON_CLASSIFIER_URL", "outcome": "preserve", "status": "code present, optional", "next_action": "deploy backend/main.py externally, then set PYTHON_CLASSIFIER_URL"},
+  {"capability": "records (scan history)", "source": "old project's cloud database (not in archive)", "outcome": "migrate", "status": "pending", "next_action": "request CSV/JSON export of scans"},
+  {"capability": "auth identities (existing users)", "source": "old project's auth (not in archive)", "outcome": "migrate", "status": "pending", "next_action": "request user export (emails + original IDs)"}
+]
