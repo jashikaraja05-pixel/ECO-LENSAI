@@ -10,7 +10,9 @@
 | Team leader | Jashika Rajasekaran |
 | Institution | Rathinam Technical Campus |
 
-Live app: <https://eco-len.lovable.app>
+Live app: <https://eco-len.lovable.app> _(update to this project's published address after publishing)_
+
+Demo video (2 min): **[ADD VIDEO LINK HERE]**
 
 ![Sign-in screen](docs/screenshots/auth.png)
 
@@ -37,6 +39,10 @@ EcoLens AI lets anyone photograph a waste item (upload or live camera). A vision
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Scanner](docs/screenshots/scan.png) |
 | ![History](docs/screenshots/history.png) | ![Learn Hub](docs/screenshots/learn.png) |
 | ![Organic result](docs/screenshots/result-organic.png) | ![Uncertain result](docs/screenshots/result-uncertain-mixed.png) |
+
+## Design
+
+Oceanic Teal theme: bright cyan and mint gradients with white rounded cards. Bin colours stay green, blue, red and black so they match real municipal bins.
 
 ## Features
 
@@ -89,6 +95,7 @@ It sends the uploaded image to a real vision model over an OpenAI-compatible Cha
 
 ### Web app
 ```bash
+cp .env.example .env   # fill in your values
 bun install
 bun run dev
 ```
@@ -115,7 +122,7 @@ Deploy it to any Python host (Render, Railway, Fly.io…) with start command `uv
 | `AI_MODEL` | Python service (optional) | Default `google/gemini-3-flash-preview` |
 | `CORS_ORIGINS` | Python service (optional) | Comma-separated origins, default `*` |
 
-No keys are hardcoded in the repository.
+No keys are hardcoded in the repository. Copy `.env.example` (root) and `backend/.env.example` to `.env` and fill in values; `.env` files are git-ignored.
 
 ## API
 
@@ -176,7 +183,18 @@ The web app is published on Lovable at <https://eco-len.lovable.app> (frontend, 
 2. Scan Waste → upload or use the camera → Analyze Waste.
 3. Open Dashboard and History to see stored results; try a blurry photo to see the Uncertain state.
 
+## For judges: test account
+
+- Email: **[ADD JUDGE TEST EMAIL]**
+- Password: **[ADD JUDGE TEST PASSWORD]**
+
+Or sign up with your own email and click the confirmation link. Each account sees only its own scans.
+
 ## AI tools disclosure
 - Built with the Lovable AI coding assistant.
 - Classification uses third-party vision models through the Lovable AI Gateway. No custom model was trained.
 - Test images used in the evaluation tables were AI-generated.
+
+## License
+
+Released under the [MIT License](LICENSE).
